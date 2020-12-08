@@ -101,6 +101,7 @@ class Set:
                 2 : 効果なしカードの譲渡
                 3 : 
                 ...10(これから考える)
+    vs                          : コンソールによる対戦を可能とする
     -----------
     Methods
     -----------
@@ -111,7 +112,7 @@ class Set:
     #初期化/初期設定
     def __init__(self, player_counts=4, rules=[0,0], effects=[8,11], \
                  joker_counts=2, exchange_cards=2, games=10, \
-                     strategies=[0,0]):
+                     strategies=[0,0], vs=0):
         self.player_counts = player_counts
         self.rules = rules
         self.effects = effects
@@ -119,6 +120,7 @@ class Set:
         self.exchange_cards = exchange_cards
         self.games = games
         self.strategies = strategies
+        self.vs = vs
         self.history = []
         self.battle_record = {}
         self.battle_record2 = {}
@@ -180,9 +182,12 @@ class Set:
                 pass_dict[i] = 0
             #カードの分配
             hands = self.card_shuffle()
-            #1ゲーム前の順位からのカードの交換処理
+            #1ゲーム前の順位からのカードの交換処理(vs)
             if games > 1:
-                hands = self.exchange(hands, games)
+                if self.vs == 0:
+                    hands = self.exchange(hands, games)
+                else:
+                    hands = self.exchange_vs(hands, games)
             #初期カードの記録
             for  i in range(self.player_counts):
                 self.battle_record2[games].append(hands[i])
@@ -1581,7 +1586,7 @@ class Set:
                             hands_prelist = [self.priority_dicts[0][i3[-1]] for i3 in hands[i2]]
         return (hands, count, priority, pass_dict, pass_counts, presence_11, dust_box)
             
-    #カード交換処理
+    #カード交換処理(vs=0)
     def exchange(self, hands, games):
         exchange_counts = self.exchange_cards 
         for i in range(self.exchange_cards):
@@ -1595,9 +1600,47 @@ class Set:
                 sender_prelist = sorted(hands[sender], key=lambda x:self.priority_dicts[0][x[1]]) 
                 sender_give_cards.append(sender_prelist[-1])
                 hands[sender].remove(sender_give_cards[-1])
+                #[受け手]
                 if self.decide_strategies(receiver) == 0:
                     receiver_give_cards.append(random.choice(hands[receiver]))
-                    hands[receiver].remove(receiver_give_cards[-1])
+                hands[receiver].remove(receiver_give_cards[-1])
+            for i2 in sender_give_cards:
+                hands[receiver].append(i2)
+            for i2 in receiver_give_cards:
+                hands[sender].append(i2)
+        return hands
+    
+    #カード交換処理(vs=1)
+    def exchange_vs(self, hands, games):
+        exchange_counts = self.exchange_cards 
+        for i in range(self.exchange_cards):
+            exchange_counts -= 1 
+            sender_give_cards = []
+            receiver_give_cards = []
+            for i2 in range(i+1):
+                receiver = self.battle_record[games-1][exchange_counts]
+                sender = self.battle_record[games-1][::-1][exchange_counts]
+                #[送り手]最上位カードの選択/[受け手]戦術による選択
+                sender_prelist = sorted(hands[sender], key=lambda x:self.priority_dicts[0][x[1]]) 
+                sender_give_cards.append(sender_prelist[-1])
+                hands[sender].remove(sender_give_cards[-1])
+                #[受け手]receiver=0の場合、コンソールからsender_give_cardsの選択
+                if receiver == 0:
+                    print('hands:{}'.format(hands[receiver]))
+                    receiver_give_cards_pre = input('Player {}!'.format(receiver) +
+                                    ' Select a send card![ex)♥,7(or J1,J1))]:')
+                    receiver_symbol = receiver_give_cards_pre.split(',')[0]
+                    try:
+                        receiver_number = int(receiver_give_cards_pre.split(',')[1])
+                    except ValueError:
+                        receiver_number = receiver_give_cards_pre.split(',')[1]
+                    receiver_give_cards.append((receiver_symbol, receiver_number))
+                    print(receiver_give_cards)
+                else:
+                    #strategy=0の場合、ランダム選択
+                    if self.decide_strategies(receiver) == 0:
+                        receiver_give_cards.append(random.choice(hands[receiver]))
+                hands[receiver].remove(receiver_give_cards[-1])
             for i2 in sender_give_cards:
                 hands[receiver].append(i2)
             for i2 in receiver_give_cards:
@@ -1743,7 +1786,7 @@ class Pipeline:
             for para_num in para_con_cou:
                 para_dict[self.sets[counts][0]] = self.sets[counts][1][para_num]
                 counts += 1
-            x = RichPeople(para_dict['player_counts'], para_dict['rules'], para_dict['effects'],
+            x = Set(para_dict['player_counts'], para_dict['rules'], para_dict['effects'],
                            para_dict['joker_counts'], para_dict['exchange_cards'],para_dict['games'],
                            para_dict['strategies'])
             x.start()
