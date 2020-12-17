@@ -1905,10 +1905,10 @@ class Pipeline:
     Parameters
     --------------
     sets            :[(parameter, conditions)]_tuple_in_list
-    parameters      :Richpeopleのパラメータ名_str
-    conditions      :Richpeopleのパラメータ値_list
+    parameters      :RichPeopleのパラメータ名_str
+    conditions      :RichPeopleのパラメータ値_list
     
-    ex.[x = Pipeline([('rules', [[0,0], [1,0], [0,1]]), ('games', [10, 100, 1000])])] 
+    ex.[x = Pipeline([('rules', [[0,0,0], [1,0.0], [0,1,1]]), ('games', [10, 100, 1000])])] 
     """
     def __init__(self, sets):
         self.sets = sets
@@ -1916,9 +1916,9 @@ class Pipeline:
     
     def start(self):
         #parameters初期値
-        para_dict = {'player_counts':4, 'rules':[0,0], 'effects':[8,11], 
+        para_dict = {'player_counts':4, 'rules':[0,0,0], 'effects':[8,11], 
                      'joker_counts':2, 'exchange_cards':2, 
-                         'games':10, 'strategies':['all',0]}
+                         'games':10, 'strategies':[0,0]}
         count = 0
         para_con = [len(self.sets[i][-1]) for i in range(len(self.sets))]
         count_max = 1
@@ -1939,14 +1939,15 @@ class Pipeline:
             for para_num in para_con_cou:
                 para_dict[self.sets[counts][0]] = self.sets[counts][1][para_num]
                 counts += 1
-            x = Set(para_dict['player_counts'], para_dict['rules'], para_dict['effects'],
+            X = Set(para_dict['player_counts'], para_dict['rules'], para_dict['effects'],
                            para_dict['joker_counts'], para_dict['exchange_cards'],para_dict['games'],
                            para_dict['strategies'])
-            x.start()
+            X.start()
+            battle_record = X.battle_record
             self.pipe_record[count] = {'player_counts':para_dict['player_counts'], 'rules':para_dict['rules'],
                                 'effects':para_dict['effects'], 'joker_counts':para_dict['joker_counts'],
                                'exchange_cards':para_dict['exchange_cards'], 'games':para_dict['games'],
-                               'strangies':para_dict['strategies']}
+                               'strangies':para_dict['strategies'], 'results':battle_record}
             count += 1
             
             
