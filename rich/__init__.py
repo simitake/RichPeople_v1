@@ -5,60 +5,6 @@ Created on Sun Aug 16 11:02:48 2020
 @author: 81802
 """
 
-'''
-＜流れ＞
-起動
-↓
-プレイヤー数選択
-↓
-ルール選択
-↓
-ゲームスタート(一巡目)
-↓
-カードシャッフル
-↓
-カード配布
-↓
-♦3セットスタート
-↓
----------------------------------小ループ1開始
-カード選択
-↓
-処理
-↓
-カード選択
-↓
-処理
-----------------------------------小ループ1終了
-↓
-1位から順位確定
-↓
-手札交換
-↓
-------------------------------------------------------------------(大ループ開始)
-ゲームスタート(二巡目)
-↓
-フリーセットスタート
-↓
----------------------------------小ループ2開始
-カード選択
-↓
-処理
-↓
-カード選択
-↓
-処理
-----------------------------------小ループ2終了
-↓
-1位から順位確定
-↓
-手札交換
-------------------------------------------------------------------(大ループ終了)
-↓
-結果集計
-
-'''
-
 import random
 import copy
 from tqdm import tqdm
@@ -71,7 +17,7 @@ class Set:
     Perameters
     ----------
     player_counts             : プレイヤー人数_int_2~52_ini 4
-    rules                     : 階段・縛りの有無_list_[0or1, 0or1]_ini [0,0]
+    rules                     : 階段・縛り・都落ちの有無_list_[0or1, 0or1, 0or1]_ini [0,0,0]
     effects      : カードの効果の有無_list_[4,5,7,8,10,11,12]_ini [8,11]
                 4 : 出した枚数のカードを捨て札から自分の手札に回収する
                 5 : 出した枚数順番を一人飛ばす
@@ -83,7 +29,7 @@ class Set:
     joker_counts　              :　ジョーカーの枚数_int_0~2_ini 2
     exchange_cards             : 一巡終わるごとの手札交換最大枚数_int_0~26_ini 2
     games:[0~∞]}]        : 巡回する回数_int_1~10_ini 10
-    strategies                 : 各プレイヤーの戦略_list_[0,[0~,0~]] or [1,[0~,0~],[0~,0~]]_ini[0,[0]]
+    strategies                 : 各プレイヤーの戦略_list_[0,0~] or [1,[0~,0~],[0~,0~]]_ini[0,0]
                 strategies[0](全プレイヤー指定か各プレイヤー指定か)
                 0 : 全プレイヤーが同戦略
                 1 : 人数分の戦略を指定する
@@ -110,7 +56,7 @@ class Set:
     """
     
     #初期化/初期設定
-    def __init__(self, player_counts=4, rules=[0,0], effects=[8,11], \
+    def __init__(self, player_counts=4, rules=[0,0,0], effects=[8,11], \
                  joker_counts=2, exchange_cards=2, games=10, \
                      strategies=[0,0], vs=0):
         self.player_counts = player_counts
@@ -246,19 +192,23 @@ class Set:
                     #ゲーム終了判断(勝利者が規定を満たした場合)
                     if self.player_counts - list(pass_dict.values()).count(2) == 1:
                         for i in range(self.player_counts):
-                            if hands[i]:
+                            if hands[i] and pass_dict[i] != 3:
                                 self.battle_record[games].append(i)
-                                #print('--------------\nfinish winners:{}'.\
-                                #format(self.battle_record[games]))
+                        for i in range(self.player_counts):
+                            if pass_dict[i] == 3:
+                                self.battle_record[games].append(i)
                         break_turn_loop = True
                         break
                     #ゲーム終了判断(カード選択不可によるループ状態)
                     if turn > 54:
                         for i in range(self.player_counts):
-                            if hands[i]:
+                            if hands[i] and pass_dict[i] != 3:
                                 self.battle_record[games].append(i)
                                 #print('--------------\nfinish winners:{}'.\
-                                #format(self.battle_record[games])
+                                #format(self.battle_record[games]))
+                        for i in range(self.player_counts):
+                            if pass_dict[i] == 3:
+                                self.battle_record[games].append(i)
                         break_turn_loop = True
                         break
                     #行動処理
@@ -283,8 +233,46 @@ class Set:
                             print('pass')
                             continue
                         #カード選択(出せるカードを最大or最小、階段優先、革命優先)
-                        select_cards = self.selection(selectable_cards_list, strategy)
-                        select_counts = copy.copy(count)
+                        if self.vs == 0:
+                            select_cards = self.selection(selectable_cards_list, strategy)
+                        else:
+                            if select_player == 0:
+                                print('hands:{}'.format(sorted(hands[select_player], key=lambda x:self.priority_dicts[0][x[1]])))
+                                while True:
+                                    select_cards_pre = input('player0! Select cards or pass![ex)♥,7/♠,7/0]:')
+                                    select_cards = []
+                                    if select_cards_pre != 'pass':
+                                        for i in select_cards_pre[:-2].split('/'):
+                                            select_symbol = i.split(',')[0]
+                                            try:
+                                                select_number = int(i.split(',')[1])
+                                            except IndexError:
+                                                print('ERROR:Your choice is inaccurate!')
+                                                continue
+                                            except ValueError:
+                                                select_number = i.split(',')[1]
+                                            select_cards.append((select_symbol, select_number))
+                                        try:
+                                            select_cards.append(int(select_cards_pre[-1]))
+                                        except ValueError:
+                                            continue
+                                    print(select_cards)
+                                    print(selectable_cards_list)
+                                    if select_cards in selectable_cards_list \
+                                        or select_cards_pre == 'pass':
+                                        break
+                                    else:
+                                        print('ERROR:Your select cards is not in selectable cards!')
+                                        continue
+                                if select_cards_pre == 'pass':
+                                    count += 1
+                                    pass_counts += 1
+                                    pass_dict[select_player] = 1
+                                    print('pass')
+                                    continue
+                            else:
+                                select_cards = self.selection(selectable_cards_list, strategy)
+                        select_counts = copy.copy(count)    
                         #print('select player:' + str(select_player))
                         print('last_cards:{}, select cards:{}'.format(last_cards, select_cards))
                         #if select_cards[-1] == 1:
@@ -346,11 +334,18 @@ class Set:
                         #カード効果処理
                         if len(select_cards) >= 5:
                             priority = (priority + 1) % 2
-                        (hands, count, priority, pass_dict, pass_counts, \
-                         presence_11, dust_box) = self.effection\
-                        (select_player, hands, select_cards, count, priority, \
-                         pass_dict, pass_counts, presence_11, strategy, \
-                             last_cards, dust_box)
+                        if select_player == 0 and self.vs == 1:
+                            (hands, count, priority, pass_dict, pass_counts, \
+                             presence_11, dust_box) = self.effection_vs\
+                            (select_player, hands, select_cards, count, priority, \
+                             pass_dict, pass_counts, presence_11, strategy, \
+                                 last_cards, dust_box)
+                        else:
+                            (hands, count, priority, pass_dict, pass_counts, \
+                             presence_11, dust_box) = self.effection\
+                            (select_player, hands, select_cards, count, priority, \
+                             pass_dict, pass_counts, presence_11, strategy, \
+                                 last_cards, dust_box)
                         #捨て札処理
                         dust_box = dust_box + select_cards[:-1] 
                         last_cards = select_cards
@@ -363,22 +358,35 @@ class Set:
                             pass_counts = -1 + [pass_dict[i] for i in range(self.player_counts)].count(1)
                             winning_set += 1
                             print('winners:' + str(self.battle_record[games]))                        
+                            if self.rules[2] == 1 and  games >= 2:
+                                if pass_dict[self.battle_record[games-1][0]] <= 1:
+                                    pass_dict[self.battle_record[games-1][0]] = 3
+                                    playing_counts -= 1
+                                    winning_set += 1
+                                    print('city_fall:'*100 + str(self.battle_record[games-1][0]))      
                             #カード効果処理で勝利者が出た時の処理
                             for i in range(self.player_counts):
-                                if not hands[i] and pass_dict[i] != 2:
+                                if not hands[i] and pass_dict[i] <= 1:
                                     self.battle_record[games].append(i)
                                     pass_dict[i] = 2
                                     playing_counts -= 1
                                     winning_set += 1
                             count += 1
                             continue
+                        
                         #カード効果処理で勝利者が出た時の処理
                         for i in range(self.player_counts):
-                            if not hands[i] and pass_dict[i] != 2:
+                            if not hands[i] and pass_dict[i] <= 1:
                                 self.battle_record[games].append(i)
                                 pass_dict[i] = 2
                                 playing_counts -= 1
                                 winning_set += 1
+                                if self.rules[2] == 1 and  games >= 2:
+                                    if pass_dict[self.battle_record[games-1][0]] <= 1:
+                                        pass_dict[self.battle_record[games-1][0]] = 3
+                                        playing_counts -= 1
+                                        winning_set += 1
+                                        print('city_fall:'*100 + str(self.battle_record[games-1][0]))  
                         #勝利者が出た時のパスターン処理
                         if winning_set:
                             pass_counts += 1
@@ -389,6 +397,9 @@ class Set:
                         count += 1
                     elif pass_dict[select_player] == 2:
                         print('winned')
+                        count += 1
+                    elif pass_dict[select_player] == 3:
+                        print('falled')
                         count += 1
                     turn += 1
             if break_game_loop == True:
@@ -649,7 +660,7 @@ class Set:
             for i in preselect_cards_list:
                 prelist = list(set(i))
                 prelist = sorted(prelist, key=lambda x:self.priority_dicts[0][x[1]]) 
-                if not prelist in preselectable_cards_list:
+                if not prelist + [0] in preselectable_cards_list:
                     preselectable_cards_list.append(prelist + [0])
             return preselectable_cards_list
               
@@ -1245,7 +1256,7 @@ class Set:
             for i in preselect_cards_list:
                 prelist = list(set(i))
                 prelist = sorted(prelist, key=lambda x:self.priority_dicts[0][x[1]]) 
-                if not prelist in preselectable_cards_list:
+                if not prelist + [0] in preselectable_cards_list:
                     preselectable_cards_list.append(prelist + [0])
             preselectable_cards_list_stairs = three_cards_stairs + \
                                               four_cards_stairs + \
@@ -1253,7 +1264,7 @@ class Set:
                                               six_cards_stairs + \
                                               seven_over_cards_stairs
             for i in preselectable_cards_list_stairs:
-                if not i in preselectable_cards_list:
+                if not i + [1] in preselectable_cards_list:
                     preselectable_cards_list.append(i + [1]) 
             return preselectable_cards_list
     
@@ -1263,7 +1274,7 @@ class Set:
                        pass_counts, presence_11, strategy, dust_box, tie):
         preselectable_cards_list = copy.deepcopy(preselectable_cards_list)
         #階段なし・縛りなし
-        if rules == [0, 0]:
+        if rules[:2] == [0, 0]:
             selectable_cards_list = []
             if len(last_cards) == 0:
                 selectable_cards_list = preselectable_cards_list
@@ -1278,7 +1289,7 @@ class Set:
                         if select_num > last_num:
                             selectable_cards_list.append(i)
         #階段あり・縛りなし
-        elif rules == [1, 0]:
+        elif rules[:2] == [1, 0]:
             selectable_cards_list = []
             if len(last_cards) == 0:
                 selectable_cards_list = preselectable_cards_list
@@ -1298,7 +1309,7 @@ class Set:
                             selectable_cards_list.append(i)
                     
         #階段なし・縛りあり
-        elif rules == [0, 1]:
+        elif rules[:2] == [0, 1]:
             selectable_cards_list = []
             if len(last_cards) == 0:
                 selectable_cards_list = preselectable_cards_list
@@ -1342,7 +1353,7 @@ class Set:
                         else:
                             selectable_cards_list.append(i)
         #階段あり・縛りあり
-        elif rules == [1, 1]:
+        elif rules[:2] == [1, 1]:
             selectable_cards_list = []
             if len(last_cards) == 0:
                 selectable_cards_list = preselectable_cards_list
@@ -1499,7 +1510,7 @@ class Set:
             cards_converted = cards
         return cards_converted
     
-    #カード効果処理
+    #カード効果処理(player!=0 or vs==0)
     def effection(self, select_player, hands, select_cards, count, priority, \
                   pass_dict, pass_counts, presence_11, strategy, last_cards, dust_box):
         hands = copy.deepcopy(hands)
@@ -1519,9 +1530,9 @@ class Set:
             for i in range(count_4):
                 #戦術パターン0:リストからランダムに選択
                 if strategy == 0:
-                    select_dust_card = random.choice(dust_box)
-                    dust_box.remove(select_dust_card)
-                    hands[select_player].append(select_dust_card)
+                    select_revival_card = random.choice(dust_box)
+                    dust_box.remove(select_revival_card)
+                    hands[select_player].append(select_revival_card)
         if 5 in self.effects and 5 in select_cards_num:
             count_5 = select_cards_num.count(5)
             select_player_copy = copy.copy(select_player)
@@ -1585,6 +1596,139 @@ class Set:
                             hands[i2].remove(hands[i2][dump_index])
                             hands_prelist = [self.priority_dicts[0][i3[-1]] for i3 in hands[i2]]
         return (hands, count, priority, pass_dict, pass_counts, presence_11, dust_box)
+    
+    #カード効果処理(player==0 and vs==1)
+    def effection_vs(self, select_player, hands, select_cards, count, priority, \
+                  pass_dict, pass_counts, presence_11, strategy, last_cards, dust_box):
+        hands = copy.deepcopy(hands)
+        pass_dict = copy.deepcopy(pass_dict)
+        select_cards_num = [i[-1] for i in select_cards[:-1]]
+        count = copy.copy(count)
+        dust_box = copy.copy(dust_box)
+        priority = copy.copy(priority)
+        presence_11 = copy.copy(presence_11)
+        for i in select_cards[:-1]:
+            hands[select_player].remove(i)  
+        if last_cards == [('J1', 'J1'), 0] or last_cards == [('J2', 'J2'), 0]:
+            if select_cards == [('♠', 3), 0]:
+                pass_counts = self.player_counts
+        if 4 in self.effects and 4 in select_cards_num:
+            count_4 = select_cards_num.count(4)
+            for i in range(count_4):
+                #コンソールによる蘇生カード選択
+                while True:
+                    print(dust_box)
+                    select_revival_card_pre = input('Select revival card![ex)♥,7 (or J1,J1)]:')
+                    select_symbol = select_revival_card_pre.split(',')[0]
+                    try:
+                        select_number = int(select_revival_card_pre.split(',')[1])
+                    except ValueError:
+                        select_number = select_revival_card_pre.split(',')[1]
+                    select_revival_card = (select_symbol, select_number)
+                    if not select_revival_card in dust_box:
+                        print('Your select card is not dust box!')
+                        continue
+                    else:
+                        dust_box.remove(select_revival_card)
+                        hands[select_player].append(select_revival_card)
+                        break
+        if 5 in self.effects and 5 in select_cards_num:
+            count_5 = select_cards_num.count(5)
+            select_player_copy = copy.copy(select_player)
+            skip_count = 0
+            count_sub = 0
+            while count_5 * 2 - 1 > skip_count:
+                select_player_copy += 1
+                select_player_sub = select_player_copy % self.player_counts
+                if pass_dict[select_player_sub] == 0:
+                    pass_dict[select_player_sub] = 1
+                    pass_counts += 1
+                    skip_count += 1
+                count += 1
+                count_sub += 1
+                if count_sub == self.player_counts - 1:
+                    break
+        if 7 in self.effects and 7 in select_cards_num:
+            #受け取る人の指定
+            receive_player = None
+            counter = 1
+            while receive_player == None:
+                if hands[(select_player + counter) % self.player_counts]:
+                    receive_player = (select_player + counter) % self.player_counts
+                counter += 1
+            count_7 = select_cards_num.count(7)
+            for i in range(count_7):
+                #コンソールによる選択
+                while True:
+                    print(hands[0])
+                    select_give_card_pre = input('Select give card![ex)♥,7 (or J1,J1)]:')
+                    select_symbol = select_give_card_pre.split(',')[0]
+                    try:
+                        select_number = int(select_give_card_pre.split(',')[1])
+                    except ValueError:
+                        select_number = select_give_card_pre.split(',')[1]
+                    select_give_card = (select_symbol, select_number)
+                    if not select_give_card in hands[0]:
+                        print('Your select card is not in hand!')
+                        continue
+                    else:
+                        hands[0].remove(select_give_card)
+                        hands[receive_player].append(select_give_card)
+                        break
+        if 8 in self.effects and 8 in select_cards_num:
+            pass_counts = self.player_counts
+        if 10 in self.effects and 10 in select_cards_num:
+            count_10 = select_cards_num.count(10)
+            for i in range(count_10):
+                #コンソールによる選択
+                while True:
+                    print(hands[0])
+                    select_dump_card_pre = input('Select dump card![ex)♥,7 (or J1,J1)]:')
+                    select_symbol = select_dump_card_pre.split(',')[0]
+                    try:
+                        select_number = int(select_dump_card_pre.split(',')[1])
+                    except ValueError:
+                        select_number = select_dump_card_pre.split(',')[1]
+                    select_dump_card = (select_symbol, select_number)
+                    if not select_dump_card in hands[0]:
+                        print('Your select card is not in hand!')
+                        continue
+                    else:
+                        hands[0].remove(select_dump_card)
+                        dust_box.append(select_dump_card)
+                        break
+        if 11 in self.effects and 11 in select_cards_num:
+            if priority == 0:
+                priority = 1
+            elif priority == 1:
+                priority = 0
+            presence_11 += 1
+        if 12 in self.effects and 12 in select_cards_num:
+            count_12 = select_cards_num.count(12)
+            for i in range(count_12):
+                #コンソールによる選択
+                while True:
+                    print(hands[0])
+                    select_dump_num_pre = input('Select dump number![ex)7 (or J)]:')
+                    try:
+                        select_dump_num = int(select_dump_num_pre)
+                    except:
+                        select_dump_num = select_dump_num_pre
+                    try:
+                        dump_num = self.priority_dicts[0][select_dump_num]
+                        break
+                    except:
+                        print('Your choice in inaccurate!')
+                        continue
+                for i2 in range(self.player_counts):
+                    if hands[i2]:
+                        hands_prelist = [self.priority_dicts[0][i3[-1]] for i3 in hands[i2]]
+                        while dump_num in hands_prelist:
+                            dump_index = hands_prelist.index(dump_num)
+                            dust_box.append(hands[i2][dump_index])
+                            hands[i2].remove(hands[i2][dump_index])
+                            hands_prelist = [self.priority_dicts[0][i3[-1]] for i3 in hands[i2]]
+        return (hands, count, priority, pass_dict, pass_counts, presence_11, dust_box)
             
     #カード交換処理(vs=0)
     def exchange(self, hands, games):
@@ -1626,21 +1770,30 @@ class Set:
                 hands[sender].remove(sender_give_cards[-1])
                 #[受け手]receiver=0の場合、コンソールからsender_give_cardsの選択
                 if receiver == 0:
-                    print('hands:{}'.format(hands[receiver]))
-                    receiver_give_cards_pre = input('Player {}!'.format(receiver) +
+                    print('hands:{}'.format(sorted(hands[receiver], key=lambda x:self.priority_dicts[0][x[1]])))
+                    while True:
+                        try:
+                            receiver_give_cards_pre = input('Player {}!'.format(receiver) +
                                     ' Select a send card![ex)♥,7(or J1,J1))]:')
-                    receiver_symbol = receiver_give_cards_pre.split(',')[0]
-                    try:
-                        receiver_number = int(receiver_give_cards_pre.split(',')[1])
-                    except ValueError:
-                        receiver_number = receiver_give_cards_pre.split(',')[1]
-                    receiver_give_cards.append((receiver_symbol, receiver_number))
+                            receiver_symbol = receiver_give_cards_pre.split(',')[0]
+                            receiver_number = int(receiver_give_cards_pre.split(',')[1])
+                            receiver_give_cards.append((receiver_symbol, receiver_number))
+                            hands[receiver].remove(receiver_give_cards[-1])
+                            break
+                        except ValueError:
+                            receiver_number = receiver_give_cards_pre.split(',')[1]
+                            receiver_give_cards.append((receiver_symbol, receiver_number))
+                            hands[receiver].remove(receiver_give_cards[-1])
+                            break
+                        except:
+                            print('Your choice is inaccurate!')
+                            continue
                     print(receiver_give_cards)
                 else:
                     #strategy=0の場合、ランダム選択
                     if self.decide_strategies(receiver) == 0:
                         receiver_give_cards.append(random.choice(hands[receiver]))
-                hands[receiver].remove(receiver_give_cards[-1])
+                        hands[receiver].remove(receiver_give_cards[-1])
             for i2 in sender_give_cards:
                 hands[receiver].append(i2)
             for i2 in receiver_give_cards:
