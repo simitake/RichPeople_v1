@@ -76,22 +76,7 @@ class Set:
                           {1:2, 2:1, 3:13, 4:12, 5:11, 6:10, 7:9, 8:8,\
                           9:7, 10:6, 11:5, 12:4, 13:3, 'J1':20, 'J2':20}]
         #使用カード設定
-        symbols = ['♦','♥','♣','♠','J1','J2']
-        if self.joker_counts == 1:
-            del symbols[-1]
-        elif self.joker_counts == 0:
-            del symbols[-2:]       
-        numbers = [1,2,3,4,5,6,7,8,9,10,11,12,13]
-        self.cards = []
-        for i in symbols:
-            if i == 'J1':
-                self.cards.append(('J1', 'J1'))
-            elif i == 'J2':
-                self.cards.append(('J2', 'J2'))
-            else:
-                for i2 in numbers:
-                    self.cards.append((i, i2))
-        self.cards_counts = len(self.cards)
+        self.card_set()
         
         #初期設定の表示
         print('player_count:'+str(self.player_counts), 
@@ -1897,6 +1882,24 @@ class Set:
         #fig2.savefig('ranking_rate.png')
         #fig3.savefig('contribution.png')
         plt.show()
+    
+    def card_set(self):
+        symbols = ['♦','♥','♣','♠','J1','J2']
+        numbers = [1,2,3,4,5,6,7,8,9,10,11,12,13]
+        self.cards = []
+        if self.joker_counts == 1:
+            del symbols[-1]
+        elif self.joker_counts == 0:
+            del symbols[-2: ]       
+        for i in symbols:
+            if i == 'J1':
+                self.cards.append(('J1', 'J1'))
+            elif i == 'J2':
+                self.cards.append(('J2', 'J2'))
+            else:
+                for i2 in numbers:
+                    self.cards.append((i, i2))
+        self.cards_counts = len(self.cards)
         
 
 class Pipeline:
@@ -1950,6 +1953,7 @@ class Pipeline:
                                'strangies':para_dict['strategies'], 'results':battle_record}
             count += 1
             
+    
             
         
         
