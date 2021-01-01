@@ -238,6 +238,8 @@ class Set:
                                             except ValueError:
                                                 select_number = i.split(',')[1]
                                             select_cards.append((select_symbol, select_number))
+                                        select_cards = sorted(select_cards, key=lambda x:x[0]) 
+                                        select_cards = sorted(select_cards, key=lambda x:self.priority_dicts[0][x[1]]) 
                                         try:
                                             select_cards.append(int(select_cards_pre[-1]))
                                         except ValueError:
@@ -645,6 +647,7 @@ class Set:
                                   four_cards + five_cards + six_cards
             for i in preselect_cards_list:
                 prelist = list(set(i))
+                prelist = sorted(prelist, key=lambda x:x[0]) 
                 prelist = sorted(prelist, key=lambda x:self.priority_dicts[0][x[1]]) 
                 if not prelist + [0] in preselectable_cards_list:
                     preselectable_cards_list.append(prelist + [0])
@@ -1241,6 +1244,7 @@ class Set:
                                   seven_over_cards
             for i in preselect_cards_list:
                 prelist = list(set(i))
+                prelist = sorted(prelist, key=lambda x:x[0]) 
                 prelist = sorted(prelist, key=lambda x:self.priority_dicts[0][x[1]]) 
                 if not prelist + [0] in preselectable_cards_list:
                     preselectable_cards_list.append(prelist + [0])
