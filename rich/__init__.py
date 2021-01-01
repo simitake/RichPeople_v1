@@ -23,6 +23,7 @@ class Set:
                 5 : 出した枚数順番を一人飛ばす
                 7 : 出した枚数のカードを自分の手札から次番に渡す
                 8 : 出した場合流れを強制終了し、自分からターンを始める、このカードで上がれない
+                9 : 2枚出した場合流れを強制終了し、自分からターンを始める
                 10: 出した枚数のカードを自分の手札から捨てる
                 11: 出した場合流れが切れるまでその時点での強弱を逆転する
                 12: 出した枚数のカードの種類を指定、全プレイヤーの手札から該当するカードを捨てる
@@ -812,7 +813,7 @@ class Set:
                             i_next = (i_list[-1][0], self.priority_dicts[0][i_list[-1][1]]+1)
                         while i_previous in new_hands_cards:
                             i_previous_index = new_hands_cards.index(i_previous)
-                            i_list = [hands_cards[i_previous_index]] + i_list
+                            i_list.append(hands_cards[i_previous_index])
                             i_previous = (i_list[0][0], self.priority_dicts[0][i_list[0][1]]-1)
                         if len(i_list) >= 3:
                             for i2 in range(len(i_list)-2):
@@ -933,7 +934,7 @@ class Set:
                             i_next = (i_list[-1][0], self.priority_dicts[0][i_list[-1][1]]+1)
                         while i_previous in new_hands_cards:
                             i_previous_index = new_hands_cards.index(i_previous)
-                            i_list = [hands_cards[i_previous_index]] + i_list
+                            i_list.append(hands_cards[i_previous_index])
                             i_previous = (i_list[0][0], self.priority_dicts[0][i_list[0][1]]-1)
                         if len(i_list) >= 3:
                             for i2 in range(len(i_list)-2):
@@ -1551,6 +1552,9 @@ class Set:
                 hands[receive_player].append(give_cards)
         if 8 in self.effects and 8 in select_cards_num:
             pass_counts = self.player_counts
+        if 9 in self.effects and set(select_cards_num) == set([9]) \
+            and select_cards_num.count(9) == 2:
+            pass_counts = self.player_counts
         if 10 in self.effects and 10 in select_cards_num:
             #受け取る人の指定
             count_10 = select_cards_num.count(10)
@@ -1661,6 +1665,9 @@ class Set:
                         hands[receive_player].append(select_give_card)
                         break
         if 8 in self.effects and 8 in select_cards_num:
+            pass_counts = self.player_counts
+        if 9 in self.effects and set(select_cards_num) == set([9]) \
+            and select_cards_num.count(9) == 2:
             pass_counts = self.player_counts
         if 10 in self.effects and 10 in select_cards_num:
             count_10 = select_cards_num.count(10)
