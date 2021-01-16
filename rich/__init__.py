@@ -5,6 +5,7 @@ Created on Sun Aug 16 11:02:48 2020
 @author: 81802
 """
 
+import numpy as np
 import random
 import copy
 from tqdm import tqdm
@@ -76,6 +77,19 @@ class Set:
                                     'J1':20, 'J2':20},\
                           {1:2, 2:1, 3:13, 4:12, 5:11, 6:10, 7:9, 8:8,\
                           9:7, 10:6, 11:5, 12:4, 13:3, 'J1':20, 'J2':20}]
+        self.to_num_dict = {('♦',1):1, ('♦',2):2, ('♦',3):3, ('♦',4):4, ('♦',5):5, \
+                            ('♦',6):6, ('♦',7):7, ('♦',8):8, ('♦',9):9, ('♦',10):10, \
+                            ('♦',11):11, ('♦',12):12, ('♦',13):13, \
+                            ('♥',1):14, ('♥',2):15, ('♥',3):16, ('♥',4):17, ('♥',5):18, \
+                            ('♥',6):19, ('♥',7):20, ('♥',8):21, ('♥',9):22, ('♥',10):23, \
+                            ('♥',11):24, ('♥',12):25, ('♥',13):26, \
+                            ('♣',1):27, ('♣',2):28, ('♣',3):29, ('♣',4):30, ('♣',5):31, \
+                            ('♣',6):32, ('♣',7):33, ('♣',8):34, ('♣',9):35, ('♣',10):36, \
+                            ('♣',11):37, ('♣',12):38, ('♣',13):39, \
+                            ('♠',1):40, ('♠',2):41, ('♠',3):42, ('♠',4):43, ('♠',5):44, \
+                            ('♠',6):45, ('♠',7):46, ('♠',8):47, ('♠',9):48, ('♠',10):49, \
+                            ('♠',11):50, ('♠',12):51, ('♠',13):52, \
+                            ('J1','J1'):53, ('J2','J2'):54}
         #使用カード設定
         self.card_set()
         
@@ -1911,7 +1925,76 @@ class Set:
                 for i2 in numbers:
                     self.cards.append((i, i2))
         self.cards_counts = len(self.cards)
-        
+    
+    #状態(state_num)の生成関数    
+    def to_state(self, condition_num, hands, dust_box, last_cards):
+        condition_num = condition_num
+        option_num = self.to_option_num()
+        def to_option_num(self):
+            option_num = np.empty()
+            player_counts_num = np.zeros(6)
+            for i in range(1,7):
+                if i <= len(format(self.player_counts,'b')):
+                    player_counts_num[-i] = float(format(self.player_counts,'b')[-i])
+            rules_num = np.array(self.rules)
+            joker_counts_num = np.zeros(2)
+            for i in range(1,3):
+                if i <= len(format(self.joker_counts,'b')):
+                    joker_counts_num[-i] = float(format(self.joker_counts,'b')[-i])
+            exchange_cards_num = np.zeros(5)
+            for i in range(1,6):
+                if i <= len(format(self.exchange_cards,'b')):
+                    exchange_cards_num[-i] = float(format(self.exchange_cards,'b')[-i])
+            games_num = np.zeros(10)
+            for i in range(1,11):
+                if i <= len(format(self.games,'b')):
+                    games_num[-i] = float(format(self.games,'b')[-i])
+            option_num = np.concentrate([player_counts_num, rules_num, joker_counts_num,\
+                                         exchange_cards_num, games_num, np.zeros(32)])
+            option_num = option_num.reshape(5,13) 
+            return option_num
+        hands_num = self.to_hands_num(hands)
+        def to_hands_num(self, hands):
+            hands_num = np.zeros(65) 
+            for i in hands[0]:
+                hands_num[self.to_num_dict[i]] = 1.
+            hands_num = hands_num.reshape(5,13)
+            return hands_num
+        dust_num = self.to_dust_num(dust_box)
+        def to_dust_num(self, dust_box):
+            dust_num = np.zeros(65)
+            for i in dust_box:
+                dust_num[self.to_num_dict[i]] = 1.
+            dust_num = dust_num.reshape(5,13)
+            return dust_num
+        last_num = self.to_last_num(last_cards)
+        def to_last_num(self, last_cards):
+            last_num = np.zeros(65)
+            if last_cards:
+                for i in last_cards[:-1]:
+                    last_num[self.to_num_dict[i]] = 1.
+                if last_cards[-1] == 1:
+                    last_num[-1] = 1.
+            last_num = last_num.reshape(5,13)
+            return last_num
+        rank_num = self.to_rank_num()
+        def to_rank_num(self):
+            rank_num = np.zeros(65)
+            rank_num_pre = np.empty()
+            if self.battle_record:
+                count_to_rank = 0
+                for i in self.battle_record[-1]:
+                    for i2 in format(i, 'b').zfill(5):
+                        rank_num_pre.append(float(i2))
+            count_to_rank = 0
+            for i in rank_num_pre:
+                rank_num[count_to_rank] = i
+                count_to_rank += 1
+            rank_num = rank_num.reshape(5,13)
+            return rank_num
+        state_num = np.concentrate([condition_num, option_num, hands_num,\
+                                    dust_num, last_num, rank_num])
+        return state_num
 
 class Pipeline:
     """
