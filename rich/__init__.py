@@ -125,7 +125,7 @@ class Set:
             presence_11 = 0
             pass_dict = {}
             playing_counts = self.player_counts
-            #状態(0:未パス未上がり,1:パス済,2:上がり済み)の初期化
+            #状態(0:未パス未上がり,1:パス済,2:上がり済み,3:都落ち)の初期化
             for i in range(self.player_counts):
                 pass_dict[i] = 0
             #カードの分配
@@ -194,7 +194,8 @@ class Set:
                         print('go to next sets')
                         break
                     #ゲーム終了判断(勝利者が規定を満たした場合)
-                    if self.player_counts - list(pass_dict.values()).count(2) == 1:
+                    if self.player_counts - list(pass_dict.values()).count(2)\
+                        - list(pass_dict.values()).count(3) == 1:
                         for i in range(self.player_counts):
                             if self.hands[i] and pass_dict[i] != 3:
                                 self.battle_record[games].append(i)
@@ -783,7 +784,7 @@ class Set:
                     i_next = (i[0], self.priority_dicts[0][i[1]]+1)
                     while i_next in new_hands_cards:
                         i_next_index = new_hands_cards.index(i_next)
-                        i_list.append(hands_cards[i_next_index])
+                        i_list.append(hands_cards[i_next_index]) 
                         i_next = (i_list[-1][0], self.priority_dicts[0][i_list[-1][1]]+1)
                         if len(i_list) == 3:
                             three_cards_stairs.append(i_list)
@@ -1273,7 +1274,7 @@ class Set:
                                               six_cards_stairs + \
                                               seven_over_cards_stairs
             for i in preselectable_cards_list_stairs:
-                if not i + [1] in preselectable_cards_list:
+                if not i + [1] in preselectable_cards_list and len(set(i)) == len(i):
                     preselectable_cards_list.append(i + [1]) 
             return preselectable_cards_list
     
@@ -1315,7 +1316,7 @@ class Set:
                         select_num = self.priority_dicts[priority][i_converted[-2][1]]
                         last_num = self.priority_dicts[priority][last_cards[0][1]]
                     if len(i) == len(last_cards) and select_num > last_num and last_cards[-1] == i[-1]:
-                            selectable_cards_list.append(i)
+                        selectable_cards_list.append(i)
                     
         #階段なし・縛りあり
         elif self.rules[:2] == [0, 1]:
@@ -1529,6 +1530,7 @@ class Set:
         dust_box = copy.copy(dust_box)
         priority = copy.copy(priority)
         presence_11 = copy.copy(presence_11)
+        print(self.rules, select_cards)
         for i in select_cards[:-1]:
             hands[select_player].remove(i)  
         if last_cards == [('J1', 'J1'), 0] or last_cards == [('J2', 'J2'), 0]:
